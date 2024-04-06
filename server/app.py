@@ -1,49 +1,43 @@
-#!/usr/bin/env python3
-
-from flask import Flask, request, make_response, jsonify
-from flask_migrate import Migrate
-
-from models import db, Bakery, BakedGood
+from flask import Flask, jsonify, make_response, request
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+db = SQLAlchemy(app)
 
-migrate = Migrate(app, db)
+# Sample Movie model
+class Movie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
 
-db.init_app(app)
+    def to_dict(self):
+        return {'title': self.title, 'year': self.year}
+
+# Sample database of movies
+movies_db = [
+    Movie(title='Movie 1', year=2020),
+    Movie(title='Movie 2', year=2021),
+    Movie(title='Movie 3', year=2022)
+]
 
 @app.route('/')
 def home():
     return '<h1>Bakery GET-POST-PATCH-DELETE API</h1>'
 
+@app.route('/movies', methods=['GET'])
+def get_movies():
+    if request.method == 'GET':
+        movies = Movie.query.all()
+        return make_response(jsonify([movie.to_dict() for movie in movies]), 200)
+    else:
+        return make_response(jsonify({"text": "Method Not Allowed"}), 405)
+
 @app.route('/bakeries')
 def bakeries():
-    bakeries = [bakery.to_dict() for bakery in Bakery.query.all()]
-    return make_response(  bakeries,   200  )
-
-@app.route('/bakeries/<int:id>')
-def bakery_by_id(id):
-
-    bakery = Bakery.query.filter_by(id=id).first()
-    bakery_serialized = bakery.to_dict()
-    return make_response ( bakery_serialized, 200  )
-
-@app.route('/baked_goods/by_price')
-def baked_goods_by_price():
-    baked_goods_by_price = BakedGood.query.order_by(BakedGood.price.desc()).all()
-    baked_goods_by_price_serialized = [
-        bg.to_dict() for bg in baked_goods_by_price
-    ]
-    return make_response( baked_goods_by_price_serialized, 200  )
-   
-
-@app.route('/baked_goods/most_expensive')
-def most_expensive_baked_good():
-    most_expensive = BakedGood.query.order_by(BakedGood.price.desc()).limit(1).first()
-    most_expensive_serialized = most_expensive.to_dict()
-    return make_response( most_expensive_serialized,   200  )
+    # Your code for the bakeries route handler goes here
+    return '<h1>List of bakeries</h1>'
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    db.create_all()
+    app.run(debug=True)
